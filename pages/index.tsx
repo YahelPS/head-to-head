@@ -1,10 +1,8 @@
 import { Container, Heading } from "@chakra-ui/layout";
-import { Button, Text } from "@chakra-ui/react";
+import { Button, Input, Text } from "@chakra-ui/react";
 import type { NextPage } from "next";
 import Link from "next/link";
-import Router from "next/router";
 import { useEffect, useState } from "react";
-import { v4 as uuidV4 } from "uuid";
 
 const Home: NextPage = () => {
   const [websocket, setWebsocket] = useState<WebSocket | null>(null);
@@ -65,6 +63,19 @@ const Home: NextPage = () => {
           >
             Join Game
           </Button>
+          <Link
+            href={{
+              slashes: true,
+              pathname: "/game/s",
+              query: {
+                gameId,
+                clientId,
+              },
+              auth: clientId,
+            }}
+          >
+            asd
+          </Link>
           <Text>clientId: {clientId}</Text>
           <Text>gameId: {gameId}</Text>
         </>
