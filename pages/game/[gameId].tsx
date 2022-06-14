@@ -1,17 +1,14 @@
 import { Box, Container, Heading } from "@chakra-ui/layout";
 import {
+  Avatar,
   Badge,
   Button,
   HStack,
   Image,
   Input,
   Text,
-  VStack,
-  chakra,
-  theme,
-  Avatar,
   useBreakpointValue,
-  IconButton,
+  VStack,
 } from "@chakra-ui/react";
 import { AnimatePresence, motion, useAnimation } from "framer-motion";
 import { useRouter } from "next/router";
@@ -20,12 +17,10 @@ import { KeyboardEvent, useEffect, useRef, useState } from "react";
 import ChatMessage from "../../components/Game/ChatMessage";
 import GameCode from "../../components/Game/GameCode";
 import Player from "../../components/Game/Player";
-import PlayerSummary from "../../components/Game/PlayerSummary";
 import Question from "../../components/Game/Question";
 import SideSummary from "../../components/Game/SideSummary";
 import Sign from "../../components/Game/Sign";
 import SignBig from "../../components/Game/SignBig";
-import ScrollableFeed from "../../components/Scrollable";
 import Shape1 from "../../components/Shapes/Shape1";
 import Shape2 from "../../components/Shapes/Shape2";
 import Shape3 from "../../components/Shapes/Shape3";
