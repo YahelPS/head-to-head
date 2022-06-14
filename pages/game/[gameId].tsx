@@ -7,20 +7,28 @@ import {
   Input,
   Text,
   VStack,
+  chakra,
+  theme,
   Avatar,
+  useBreakpointValue,
+  IconButton,
 } from "@chakra-ui/react";
-import { m, motion, useAnimation } from "framer-motion";
+import { AnimatePresence, motion, useAnimation } from "framer-motion";
 import { useRouter } from "next/router";
-import React, { KeyboardEvent, useEffect, useRef, useState } from "react";
+import { KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import ChatMessage from "../../components/Game/ChatMessage";
+import GameCode from "../../components/Game/GameCode";
 import Player from "../../components/Game/Player";
+import PlayerSummary from "../../components/Game/PlayerSummary";
 import Question from "../../components/Game/Question";
+import SideSummary from "../../components/Game/SideSummary";
+import Sign from "../../components/Game/Sign";
 import SignBig from "../../components/Game/SignBig";
+import ScrollableFeed from "../../components/Scrollable";
 import Shape1 from "../../components/Shapes/Shape1";
 import Shape2 from "../../components/Shapes/Shape2";
 import Shape3 from "../../components/Shapes/Shape3";
-import { randomName } from "../../utils/strings";
 
 interface Message {
   user: string;
@@ -58,9 +66,15 @@ export default function Game() {
   const router = useRouter();
   const gameId = router?.query?.gameId;
   const animationControl = useAnimation();
+  const logoDisplay = useBreakpointValue({ sm: "none", md: "block" });
 
   const [websocket, setWebsocket] = useState<WebSocket | null>();
-  const [isTimerFinished, setIsTimerFinished] = useState(false);
+  const [question, setQuestion] = useState<string | null>(null);
+  const [roundEnded, setRoundEnded] = useState({
+    status: false,
+    waiting: 0,
+  });
+  const bottomRef = useRef<HTMLDivElement>(null);
   const [client, setClient] = useState<{
     name: string;
     clientId: string;
@@ -69,15 +83,110 @@ export default function Game() {
 
   const [game, setGame] = useState<Game | any>();
   const [started, setStarted] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      user: "asd",
-      message: "fyc",
-      correct: true,
-    },
-  ]);
+  const [roundResults, setRoundResults] = useState<{
+    roundNumber: number;
+    roundScores: { [playerId: string]: number };
+  } | null>(null);
+
+  const messageArr: Message[] = [];
   const inputRef = useRef<HTMLInputElement>(null);
   const nameMaxLength = 20;
+  const listeners = {
+    questions: false,
+    messages: false,
+  };
+
+  function Messages() {
+    const [messages, setMessages] = useState<{ messages: Message[] }>({
+      messages: [],
+    });
+
+    useEffect(() => {
+      if (listeners.messages) return;
+
+      listeners.messages = true;
+      websocket?.addEventListener("message", (message) => {
+        try {
+          const data = JSON.parse(message.data);
+
+          if (data.method === "message") {
+            if (data.error || !data.content || !data.author) return;
+
+            messageArr.push({
+              user: data.author.name,
+              message: data.content,
+              correct: data.correct,
+            });
+
+            setMessages({ messages: messageArr });
+          }
+        } catch {
+          console.log("Error parsing message");
+        }
+      });
+    }, []);
+
+    return (
+      <VStack
+        alignItems="flex-end"
+        flexDir="column-reverse"
+        maxH="2xl"
+        overflowY="scroll"
+        pr={2}
+        ref={bottomRef}
+        css={{
+          // WebkitMask:
+          //   "linear-gradient(180deg, rgba(0,0,0,0) 50px, rgba(0,0,0,1) 100px)",
+
+          "&::-webkit-scrollbar": {
+            width: 4,
+          },
+          "&::-webkit-scrollbar-track": {
+            width: 6,
+          },
+          "&::-webkit-scrollbar-thumb": {
+            background: "#99aab5",
+            borderRadius: 24,
+          },
+        }}
+      >
+        {[...messages.messages].reverse().map((message, index) => (
+          <ChatMessage
+            message={message.message}
+            correct={message.correct}
+            key={index}
+          />
+        ))}
+      </VStack>
+    );
+  }
+
+  function QuestionFrame() {
+    return (
+      <Container h="full" minW="full" display="flex" justifyContent="center">
+        <AnimatePresence>
+          {question && (
+            <motion.div
+              animate={animationControl}
+              transition={{ delay: 0.2 }}
+              exit={{ y: -500 }}
+              initial={{ y: -500 }}
+            >
+              <Box pt={40}>
+                <Question
+                  question={question}
+                  onTimerComplete={() => {
+                    animationControl.start({ y: -220, scale: 0.8 });
+                  }}
+                  onGuessingEnd={() => console.log("good job")}
+                />
+              </Box>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Container>
+    );
+  }
 
   function GameStarted() {
     useEffect(() => {
@@ -85,77 +194,55 @@ export default function Game() {
     }, []);
 
     return (
-      <>
-        <Container h="full" minW="full" display="flex" justifyContent="center">
-          <motion.div
-            animate={animationControl}
-            transition={isTimerFinished ? {} : { delay: 0.2 }}
-            initial={{ y: -500 }}
-          >
-            <Box pt={40}>
-              <Question
-                question="Movie genres"
-                onTimerComplete={() => {
-                  setIsTimerFinished(true);
-                  animationControl.start({ y: -220, scale: 0.8 });
-                }}
-                onGuessingEnd={() => console.log("good job")}
-              />
-            </Box>
-          </motion.div>
-        </Container>
-        <Box
-          position="absolute"
-          right={0}
-          bottom={0}
-          display="flex"
-          flexDir="row"
-          alignItems="center"
-        >
-          <VStack p={10} alignItems="flex-end">
-            {messages.map((message) => (
-              <ChatMessage message={message.message} />
-            ))}
-            <HStack pt={10}>
-              <Image
-                src="/joker.png"
-                draggable={false}
-                userSelect="none"
-                h={12}
-                borderRadius={30}
-                cursor="pointer"
-                _hover={{
-                  transform: "scale(1.1)",
-                }}
-              />
+      <Box
+        position="absolute"
+        right={0}
+        bottom={0}
+        display="flex"
+        flexDir="row"
+        alignItems="center"
+      >
+        <VStack p={10} alignItems="flex-end">
+          <Messages />
+          <HStack pt={10}>
+            <Image
+              src="/joker.png"
+              draggable={false}
+              userSelect="none"
+              h={12}
+              borderRadius={30}
+              cursor="pointer"
+              _hover={{
+                transform: "scale(1.1)",
+              }}
+            />
 
-              <Badge>9</Badge>
-              <Input
-                variant="game"
-                m={10}
-                zIndex={9999}
-                ref={inputRef}
-                autoFocus
-                onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
-                  if (event.key === "Enter") {
-                    if (!inputRef.current!.value) return;
+            <Badge>9</Badge>
+            <Input
+              variant="game"
+              m={10}
+              zIndex={9999}
+              ref={inputRef}
+              autoFocus
+              onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
+                if (event.key === "Enter") {
+                  if (!inputRef.current!.value) return;
 
-                    websocket?.send(
-                      JSON.stringify({
-                        method: "message",
-                        token: client?.token,
-                        content: inputRef.current!.value,
-                        gameId: game.id,
-                      })
-                    );
-                    inputRef.current!.value = "";
-                  }
-                }}
-              />
-            </HStack>
-          </VStack>
-        </Box>
-      </>
+                  websocket?.send(
+                    JSON.stringify({
+                      method: "message",
+                      token: client?.token,
+                      content: inputRef.current!.value,
+                      gameId: game.id,
+                    })
+                  );
+                  inputRef.current!.value = "";
+                }
+              }}
+            />
+          </HStack>
+        </VStack>
+      </Box>
     );
   }
 
@@ -192,14 +279,11 @@ export default function Game() {
           >
             Start Game
           </Button>
+          <GameCode code="ABCDEFG" />
         </VStack>
       </Container>
     );
   }
-
-  // function GameScreen({ gameStarted }: { gameStarted: boolean }) {
-  //   return gameStarted ? ;
-  // }
 
   function NameScreen() {
     const nameRef = useRef<HTMLInputElement>(null);
@@ -278,6 +362,8 @@ export default function Game() {
                 if (data.method === "join") {
                   if (data.error) return; /* error here */
                   setGame(data.game);
+                  if (data.game?.started) setStarted(true);
+
                   console.log(game);
                 }
 
@@ -294,15 +380,42 @@ export default function Game() {
                   }
                 }
 
-                if (data.method === "message") {
-                  if (data.error || !data.content || !data.author) return;
-                  const newMessages = messages.concat({
-                    user: data.author.name,
-                    message: data.content,
-                    correct: true,
+                // if (data.method === "message") {
+                //   if (data.error || !data.content || !data.author) return;
+
+                //   messageArr.push({
+                //     user: data.author.name,
+                //     message: data.content,
+                //     correct: data.correct,
+                //   });
+
+                //   setMessages({ messages: messageArr });
+                // }
+
+                if (data.method === "question") {
+                  setTimeout(() => {
+                    animationControl.start({ y: 0, scale: 1 });
+                  }, 50);
+
+                  setRoundEnded({ status: false, waiting: 0 });
+                  setQuestion(data.question);
+                }
+
+                if (data.method === "question end") {
+                  if (data.error) return /* error */;
+                  setRoundEnded({
+                    status: true,
+                    waiting: data.timeUntilNextQuestion,
                   });
 
-                  setMessages(newMessages);
+                  setRoundResults(data.game.currentRound);
+                  console.log(data.game.currentRound);
+
+                  setTimeout(() => {
+                    console.log(roundResults);
+                  }, 1000);
+
+                  setQuestion(null);
                 }
               };
             }}
@@ -313,9 +426,117 @@ export default function Game() {
       </Container>
     );
   }
-  useEffect(() => {
-    animationControl.start({ y: 0 });
-  }, []);
+
+  function RoundResultsScreen() {
+    const [timer, setTimer] = useState(roundEnded.waiting / 1000);
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setTimer(timer - 1);
+      }, 1000);
+      return () => clearInterval(interval);
+    }, [timer, roundEnded.waiting]);
+
+    const leaderboard = game.players
+      .map((player: { name: string; clientId: string }) => ({
+        name: player.name,
+        clientId: player.clientId,
+        score: roundResults?.roundScores[player.clientId] || 0,
+      }))
+      .sort((a: any, z: any) => parseFloat(z.score) - parseFloat(a.score));
+
+    const firstPart = [...leaderboard]
+      .filter((player) => player.clientId !== leaderboard[0].clientId)
+      .slice(0, Math.ceil(leaderboard.length / 2));
+
+    const secondPart = [...leaderboard]
+      .filter((player) => player.clientId !== leaderboard[0].clientId)
+      .slice(Math.ceil(leaderboard.length / 2));
+
+    // console.log({ leaderboard, players: game.players });
+
+    return (
+      <Container
+        h="full"
+        minW="full"
+        display="flex"
+        flexDir="column"
+        alignItems="center"
+      >
+        <AnimatePresence>
+          <motion.div
+            initial={{
+              y: -500,
+              opacity: 0,
+            }}
+            exit={{ y: -500, opacity: 0 }}
+            animate={{
+              y: 0,
+              opacity: 1,
+            }}
+          >
+            <Box display="flex" flexDir="column" alignItems="center">
+              <Heading
+                fontSize="6xl"
+                display="flex"
+                flexDir="row"
+                color="black"
+                zIndex={9999}
+                pt={16}
+              >
+                Round Results
+                <Text color="teal.200" transform="rotate(10deg)" pl={5}>
+                  #{roundResults?.roundNumber}
+                </Text>
+              </Heading>
+              <Heading zIndex={9999} color="black" fontSize="xl" pt={2} pb={32}>
+                Time until next round: {timer} seconds
+              </Heading>
+              <Sign style={{ position: "absolute" }} />
+            </Box>
+          </motion.div>
+          <HStack>
+            <SideSummary direction="left" players={firstPart} />
+            <motion.div
+              initial={{ y: 600, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{
+                duration: 0.5,
+              }}
+            >
+              <VStack>
+                <Heading>{leaderboard[0]?.name}</Heading>
+                <Avatar h={44} w={44} />
+                <Heading fontSize="3xl" pt={5} color="teal.400">
+                  {leaderboard[0]?.score} correct guesses
+                </Heading>
+                <Heading fontSize="2xl" pt={2} color="teal.400">
+                  +{leaderboard[0]?.score * 25} points
+                </Heading>
+              </VStack>
+            </motion.div>
+            <SideSummary direction="right" players={secondPart} />
+          </HStack>
+        </AnimatePresence>
+      </Container>
+    );
+  }
+
+  function GameStateScreen() {
+    if (roundEnded?.status === true && !question && started)
+      return <RoundResultsScreen />;
+    if (client && game && started)
+      return (
+        <>
+          {question ? <QuestionFrame /> : <RoundResultsScreen />}
+          <GameStarted />
+        </>
+      );
+
+    if (client && game && !started) return <BeforeGame />;
+
+    return <NameScreen />;
+  }
+
   return (
     <Container h="100vh" minW="full" p={25} overflow="hidden">
       <Image
@@ -325,30 +546,25 @@ export default function Game() {
         zIndex={999}
         pos="absolute"
         draggable={false}
+        display={logoDisplay}
       />
       <Shape1 />
       <Shape2 />
       <Shape3 />
       <Container h="full" minW="full">
         <VStack pt={60} pos="absolute" mt={-20}>
-          {game?.players?.map((player: any) => (
+          {game?.players?.map((player: any, index: number) => (
             <Player
               name={player.name}
               points={0}
               leader={player.clientId === game?.creator.id}
               self={player.clientId === client?.clientId}
+              key={player.clientId}
+              rank={index + 1}
             />
           ))}
         </VStack>
-        {client && game ? (
-          started ? (
-            <GameStarted />
-          ) : (
-            <BeforeGame />
-          )
-        ) : (
-          <NameScreen />
-        )}
+        <GameStateScreen />
       </Container>
     </Container>
   );

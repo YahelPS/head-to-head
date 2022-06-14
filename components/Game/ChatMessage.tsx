@@ -5,6 +5,7 @@ export default function ChatMessage({
   correct = false,
   user = "Yahel",
   message = "Hello",
+  ref = null,
 }) {
   const styles = {
     container: {
@@ -17,6 +18,8 @@ export default function ChatMessage({
       flexDir="row-reverse"
       borderRadius="full"
       px={1}
+      minW={60}
+      ref={ref}
       {...(correct ? styles.container : {})}
     >
       <Avatar />
@@ -26,10 +29,19 @@ export default function ChatMessage({
             {user}
           </Text>
         )}
-        <Text fontSize={16}>{message}</Text>
+        <Text
+          fontSize={16}
+          maxWidth={correct ? 32 : 52}
+          textAlign="right"
+          w={correct ? 32 : "auto"}
+          noOfLines={1}
+          textOverflow="ellipsis"
+        >
+          {message}
+        </Text>
       </VStack>
       {correct && (
-        <Text fontSize={16} fontWeight="bold" pr={12}>
+        <Text fontSize={16} fontWeight="bold" right={0}>
           +15
         </Text>
       )}

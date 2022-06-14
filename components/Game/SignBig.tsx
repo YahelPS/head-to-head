@@ -26,8 +26,8 @@ export default function SignBig() {
           y2="258.018"
           gradientUnits="userSpaceOnUse"
         >
-          <stop stop-color="#CC71FC" />
-          <stop offset="1" stop-color="#8242ED" />
+          <stop stopColor="#CC71FC" />
+          <stop offset="1" stopColor="#8242ED" />
         </linearGradient>
       </defs>
     </svg>

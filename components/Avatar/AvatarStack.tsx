@@ -12,8 +12,8 @@ interface Props {
 export default function AvatarStack({ avatars }: Props) {
   return (
     <Wrap spacing={-3}>
-      {avatars.map((avatar) => (
-        <WrapItem>
+      {avatars.map((avatar, index) => (
+        <WrapItem key={index}>
           <Avatar src={avatar.image} style={{ height: 40, width: 40 }} />
         </WrapItem>
       ))}
