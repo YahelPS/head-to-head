@@ -3,7 +3,7 @@ import React from "react";
 
 export default function ChatMessage({
   correct = false,
-  user = "Yahel",
+  user = "",
   message = "Hello",
   ref = null,
 }) {

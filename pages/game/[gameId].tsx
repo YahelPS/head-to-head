@@ -26,7 +26,7 @@ import Shape2 from "../../components/Shapes/Shape2";
 import Shape3 from "../../components/Shapes/Shape3";
 
 interface Message {
-  user: string;
+  author: string;
   message: string;
   correct: boolean;
 }
@@ -108,7 +108,7 @@ export default function Game() {
             if (data.error || !data.content || !data.author) return;
 
             messageArr.push({
-              user: data.author.name,
+              author: data.author.name,
               message: data.content,
               correct: data.correct,
             });
@@ -147,6 +147,7 @@ export default function Game() {
       >
         {[...messages.messages].reverse().map((message, index) => (
           <ChatMessage
+            user={message.author}
             message={message.message}
             correct={message.correct}
             key={index}
