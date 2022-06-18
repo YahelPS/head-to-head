@@ -30,6 +30,7 @@ export default function Player({
           h={10}
           w={10}
           draggable={false}
+          name={name}
           src="https://cdn.discordapp.com/avatars/678556376640913408/cd18845522ce69ade6b462b5e653dc57.png"
         />
 

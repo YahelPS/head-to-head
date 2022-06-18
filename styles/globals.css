@@ -6,37 +6,3 @@
 .input-fetti {
   width: 50% !important;
 }
-
-.avatar-b5OQ1N {
-  display: block;
-  -o-object-fit: cover;
-  object-fit: cover;
-  pointer-events: none;
-}
-.avatarStack-3vfSFa {
-  display: grid;
-  width: 100%;
-  height: 100%;
-}
-.mask-1FEkla {
-  pointer-events: none;
-  position: relative;
-  display: block;
-  height: 100%;
-  width: auto;
-}
-.svg-2azL_l {
-  position: absolute;
-}
-.wrapper-1VLyxH {
-  position: relative;
-  border-radius: 50%;
-}
-.avatar-1odLck {
-  margin-left: -2px;
-  -webkit-mask: url(https://discord.com/assets/495e7ca1850af3ddc8bc130617549480.svg);
-  mask: url(https://discord.com/assets/495e7ca1850af3ddc8bc130617549480.svg);
-  -webkit-mask-size: 100%;
-  mask-size: 100%;
-  mask-type: alpha;
-}

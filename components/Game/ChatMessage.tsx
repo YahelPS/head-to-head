@@ -22,7 +22,7 @@ export default function ChatMessage({
       ref={ref}
       {...(correct ? styles.container : {})}
     >
-      <Avatar />
+      <Avatar name={user} />
       <VStack spacing={0} pr={2} alignItems="flex-end">
         {!correct && (
           <Text fontSize={18} fontWeight="bold" color="#16c57b">
@@ -42,7 +42,7 @@ export default function ChatMessage({
       </VStack>
       {correct && (
         <Text fontSize={16} fontWeight="bold" right={0}>
-          +15
+          +25
         </Text>
       )}
     </HStack>

@@ -1,6 +1,13 @@
+import { useBreakpointValue } from "@chakra-ui/react";
 import React from "react";
 
 export default function Sign(props: React.SVGProps<SVGSVGElement>) {
+  const signScale = useBreakpointValue({
+    lg: "1",
+    md: "0.8",
+    xs: "0.6",
+  });
+
   return (
     <svg
       width="856"
@@ -9,6 +16,10 @@ export default function Sign(props: React.SVGProps<SVGSVGElement>) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       {...props}
+      style={{
+        ...props?.style,
+        transform: `scale(${signScale})`,
+      }}
     >
       <path
         d="M53.5122 1.59539L848.832 32.1376C853.826 32.3294 857.016 37.5415 854.915 42.0757L789.837 182.507C788.71 184.94 786.291 186.515 783.611 186.562L91.6541 198.897C88.2934 198.957 85.3645 196.619 84.6772 193.329L46.3914 10.0214C45.4608 5.56553 48.9636 1.42071 53.5122 1.59539Z"

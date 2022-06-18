@@ -13,10 +13,10 @@ import { useRouter } from "next/router";
 import { useEffect, useRef } from "react";
 import { toast, Toaster } from "react-hot-toast";
 import { useLocalStorage } from "usehooks-ts";
-import Shape1 from "../components/Shapes/Shape1";
-import Shape2 from "../components/Shapes/Shape2";
-import Shape3 from "../components/Shapes/Shape3";
-import { randomName } from "../utils/strings";
+import Shape1 from "../../components/Shapes/Shape1";
+import Shape2 from "../../components/Shapes/Shape2";
+import Shape3 from "../../components/Shapes/Shape3";
+import { randomName } from "../../utils/strings";
 
 export default function join() {
   const router = useRouter();
