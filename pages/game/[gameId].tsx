@@ -1,216 +1,61 @@
-import { Container } from "@chakra-ui/layout";
-import { Box, Image, useBreakpointValue, VStack, Text } from "@chakra-ui/react";
+import { Container, Box, Image, VStack } from "@chakra-ui/react";
 import { motion, useAnimation } from "framer-motion";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { useLocalStorage } from "usehooks-ts";
-import ChatMessage from "../../components/Game/ChatMessage";
-
-import Player from "../../components/Game/Player";
-import QuestionFrame from "../../components/Game/QuestionFrame";
 import Sign from "../../components/Game/Sign";
-import Timer from "../../components/Game/Timer";
 import Shape1 from "../../components/Shapes/Shape1";
 import Shape2 from "../../components/Shapes/Shape2";
 import Shape3 from "../../components/Shapes/Shape3";
-import BeforeGame from "../../screens/BeforeGame";
-import GameResultsScreen from "../../screens/GameResultsScreen";
-import GameStarted from "../../screens/GameStarted";
+import AppContext from "../../contexts/AppContext";
 import NameScreen from "../../screens/NameScreen";
-import RoundResultsScreen from "../../screens/RoundResultsScreen";
 import { randomName } from "../../utils/strings";
+import WebSocketClient from "../../WebSocketClient";
+import BeforeGame from "../../screens/BeforeGame";
+import PlayerSidebar from "../../components/Game/PlayerSidebar";
+import Player from "../../components/Game/Player";
+import GameStarted from "../../screens/GameStarted";
+import QuestionFrame from "../../components/Game/QuestionFrame";
+import RoundResultsScreen from "../../screens/RoundResultsScreen";
+import GameResultsScreen from "../../screens/GameResultsScreen";
 
-interface Game {
-  id: string;
-  creator: {
-    id: string;
-    name: string;
-  };
-  started: boolean;
-  players: {
-    [clientId: string]: {
-      name: string;
-      points: number;
-      leader: boolean;
-    }[];
-  };
+interface Client {
+  token: string;
+  clientId: string;
+  name: string;
 }
 
 export default function Game() {
   const router = useRouter();
-  const gameId = router?.query?.gameId;
-  const gameCode = router?.query?.code;
-  const [session, setSession] = useLocalStorage<string | undefined | null>(
-    "token",
-    null
-  );
+  const animationControl = useAnimation();
+  const [question, setQuestion] = useState<string | null>(null);
+  const [roundEnded, setRoundEnded] = useState<boolean | number>(false);
+  const [gameState, setGameState] = useState<{ name: string; data: any }>({
+    name: "main",
+    data: null,
+  });
   const [localName, setLocalName] = useLocalStorage<string | undefined | null>(
     "name",
     null
   );
+  const [game, setGame] = useState<any>();
+  const context = useContext(AppContext);
+  console.log(context);
 
-  const animationControl = useAnimation();
-  const logoDisplay = useBreakpointValue({ sm: "none", md: "block" });
+  const [websocket, setWebsocket] = useState<WebSocketClient | null>(null);
+  const [client, setClient] = useState<Client | undefined>();
 
-  const [websocket, setWebsocket] = useState<WebSocket | null>();
-  const [question, setQuestion] = useState<string | null>(null);
-  const [roundEnded, setRoundEnded] = useState({
-    status: false,
-    waiting: 0,
+  useEffect(() => {
+    console.log("rerender");
   });
-  const [gameEnded, setGameEnded] = useState(false);
-  const [client, setClient] = useState<{
-    name: string;
-    clientId: string;
-    token: string;
-  } | null>(null);
-
-  const [game, setGame] = useState<Game | any>();
-  const [started, setStarted] = useState(false);
-  const [hasError, setHasError] = useState(false);
-  const [roundResults, setRoundResults] = useState<{
-    roundNumber: number;
-    roundScores: { [playerId: string]: number };
-  } | null>(null);
-
-  const nameMaxLength = 20;
-
-  // useEffect(() => {
-  //   // if (!session) return;
-  //   async () => {
-  //     const data = await fetch(`http://localhost:9090/clients/${session}`).then(
-  //       (res) => res.json()
-  //     );
-
-  //     console.log(data);
-
-  //     if (data.status !== 200) {
-  //       setSession("");
-  //       return;
-  //     }
-
-  //     setClient({
-  //       name: data.client.name,
-  //       clientId: data.client.clientId,
-  //       token: session,
-  //     });
-  //   };
-  // }, [session]);
-
-  function initializeWebSocket(name: string | undefined) {
-    if (websocket) return;
-    let token;
-
-    const wss = new WebSocket(
-      `ws://localhost:9090?name=${encodeURIComponent(name ?? randomName())}`
-    );
-
-    setWebsocket(wss);
-
-    wss.onmessage = (message) => {
-      const data = JSON.parse(message.data);
-      console.log(data);
-
-      if (data.method === "connect") {
-        token = data.token;
-        setClient({
-          token,
-          clientId: data.clientId,
-          name: data.name,
-        });
-        setSession(token);
-
-        if (gameId === "create") {
-          wss.send(
-            JSON.stringify({
-              method: "create",
-              token,
-            })
-          );
-        } else {
-          wss.send(
-            JSON.stringify({
-              method: "join",
-              token,
-              gameId,
-            })
-          );
-        }
-      }
-
-      if (data.method === "join") {
-        if (data.error) return; /* error here */
-        setGame(data.game);
-        if (data.game?.started) setStarted(true);
-
-        console.log(game);
-      }
-
-      if (data.method === "create") {
-        if (!data.game || !data?.game?.id || data.error) return; /* error bud */
-        router.push(`/game/${data.game.id}`);
-        setGame(data.game);
-      }
-
-      if (data.method === "start") {
-        if (!data.error) {
-          setStarted(true);
-        }
-      }
-
-      if (data.method === "question") {
-        setTimeout(() => {
-          animationControl.start({ y: 0, scale: 1 });
-        }, 50);
-
-        setRoundEnded({ status: false, waiting: 0 });
-        setQuestion(data.question);
-      }
-
-      if (data.method === "question end") {
-        if (data.error) return /* error */;
-        setRoundEnded({
-          status: true,
-          waiting: data.timeUntilNextQuestion,
-        });
-
-        setGame(data.game);
-        setRoundResults(data.game.currentRound);
-
-        setQuestion(null);
-      }
-
-      if (data.method === "end") {
-        setGameEnded(true);
-        setGame(data.game);
-      }
-    };
-
-    wss.onclose = () => {
-      setHasError(true);
-    };
-    wss.onerror = () => {
-      setHasError(true);
-    };
-  }
 
   function PlayerSidebar() {
-    const [players, setPlayers] = useState(game?.players);
+    const [players, setPlayers] = useState(gameState.data?.players);
 
     useEffect(() => {
-      websocket?.addEventListener("message", (message) => {
-        try {
-          const data = JSON.parse(message.data);
-
-          if (data.method === "message") {
-            if (data.error || !data.content || !data.author || !data.game)
-              return;
-
-            setPlayers(data.game.players);
-          }
-        } catch {
-          console.log("Error parsing message");
-        }
+      websocket?.on("message", (data) => {
+        if (data.error || !data.content || !data.author || !data.game) return;
+        setPlayers(data.game.players);
       });
     }, []);
 
@@ -220,7 +65,7 @@ export default function Game() {
           <Player
             name={player.name}
             points={player.score || 0}
-            leader={player.clientId === game?.creator.id}
+            leader={player.clientId === gameState.data.creator.id}
             self={player.clientId === client?.clientId}
             key={player.clientId}
             rank={index + 1}
@@ -230,55 +75,65 @@ export default function Game() {
     );
   }
 
-  function GameStateScreen() {
-    // if (skipNameScreen && pageLoaded) {
-    //   initializeWebSocket(localName || randomName());
-    // }
-    if (gameEnded) return <GameResultsScreen />;
-    if (roundEnded?.status === true && !question && started)
-      return (
-        <RoundResultsScreen
-          game={game}
-          roundEnded={roundEnded}
-          roundResults={roundResults}
-        />
-      );
-    if (client && game && started)
-      return (
-        <>
-          {question ? (
-            <QuestionFrame
-              question={question}
-              animationControl={animationControl}
-            />
-          ) : (
-            <RoundResultsScreen
-              game={game}
-              roundEnded={roundEnded}
-              roundResults={roundResults}
-            />
-          )}
-          <GameStarted client={client} game={game} websocket={websocket} />
-        </>
-      );
-
-    if (client && game && !started)
-      return (
-        <BeforeGame
-          client={client}
-          game={game}
-          gameId={gameId}
-          websocket={websocket}
-        />
-      );
-
-    return (
-      <NameScreen
-        name={localName}
-        callback={(name) => initializeWebSocket(name)}
-      />
+  const connectWebsocket = (name: string | undefined) => {
+    const ws = new WebSocket(
+      `ws://localhost:9090?name=${encodeURIComponent(name ?? randomName())}`
     );
-  }
+
+    const wss = new WebSocketClient(ws);
+    setWebsocket(wss);
+
+    wss.on("connect", (data) => {
+      console.log(data);
+
+      setClient({
+        token: data.token,
+        clientId: data.clientId,
+        name: data.name,
+      });
+
+      if (router.query?.gameId === "create") {
+        wss.send("create", { token: data.token });
+      } else {
+        wss.send("join", {
+          token: data.token,
+          gameId: router.query?.gameId,
+        });
+      }
+
+      wss.on("create", (data) => {
+        router.push(`/game/${data.game.id}`);
+        setGameState({ name: "lobby", data: data.game });
+      });
+
+      wss.on("join", (data) => {
+        router.push(`/game/${data.game.id}`);
+        setGameState({ name: "lobby", data: data.game });
+      });
+
+      wss.on("start", (data) => {
+        setGameState({ name: "started", data: data.game });
+      });
+
+      wss.on("question", (data) => {
+        setRoundEnded(false);
+        setQuestion(data.question);
+        setTimeout(() => {
+          animationControl.start({ y: 0, scale: 1 });
+        }, 50);
+      });
+
+      wss.on("question end", (data) => {
+        setQuestion(null);
+        setRoundEnded(data.timeUntilNextQuestion);
+        setGameState({ name: "started", data: data.game });
+      });
+
+      wss.on("end", (data) => {
+        setGameState({ name: "ended", data: data.game });
+      });
+    });
+  };
 
   return (
     <Container h="100vh" minW="full" p={25}>
@@ -289,37 +144,46 @@ export default function Game() {
         zIndex={999}
         pos="absolute"
         draggable={false}
-        display={logoDisplay}
+        display={{ base: "none", md: "block" }}
+        alt="icon"
       />
       <Shape1 />
       <Shape2 />
       <Shape3 />
       <Container h="full" minW="full">
-        <PlayerSidebar />
-        {!hasError ? (
-          <GameStateScreen />
-        ) : (
-          <motion.div initial={{ y: -500 }} animate={{ y: "50%" }}>
-            <Box display="flex" justifyContent="center" textAlign="center">
-              <Sign />
-              <Text
-                fontSize={40}
-                pt={2}
-                fontWeight="bold"
-                alignSelf="center"
-                color="black"
-                pos="absolute"
-                maxWidth={600}
-              >
-                Something went wrong
-                <Text fontSize={20} pt={2} fontWeight="bold">
-                  Seems like you've got disconnected. Please refresh the page or
-                  try again later
-                </Text>
-              </Text>
-            </Box>
-          </motion.div>
+        {websocket && <PlayerSidebar />}
+        {question && (
+          <QuestionFrame
+            question={question}
+            animationControl={animationControl}
+          />
         )}
+        {roundEnded && gameState.name !== "ended" && (
+          <RoundResultsScreen
+            game={gameState.data}
+            timeLeft={roundEnded as number}
+            roundResults={gameState.data.currentRound}
+          />
+        )}
+        {gameState.name === "main" && (
+          <NameScreen name={localName} callback={connectWebsocket} />
+        )}
+        {gameState.name === "lobby" && (
+          <BeforeGame
+            client={client}
+            game={gameState.data}
+            gameId={router.query?.gameId}
+            websocket={websocket}
+          />
+        )}
+        {gameState.name === "started" && (
+          <GameStarted
+            client={client}
+            game={gameState.data}
+            websocket={websocket}
+          />
+        )}
+        {gameState.name === "ended" && <GameResultsScreen />}
       </Container>
     </Container>
   );

@@ -1,6 +1,7 @@
-import { Box, VStack, HStack, Badge, Input, Image } from "@chakra-ui/react";
+import { Badge, Box, HStack, Image, Input, VStack } from "@chakra-ui/react";
 import { KeyboardEvent, useEffect, useRef } from "react";
 import Messages from "../components/Game/Messages";
+import WebSocketClient from "../WebSocketClient";
 
 export default function GameStarted({
   client,
@@ -9,7 +10,7 @@ export default function GameStarted({
 }: {
   client: any;
   game: any;
-  websocket: WebSocket | null | undefined;
+  websocket: WebSocketClient | null | undefined;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const listeners = {
@@ -33,6 +34,7 @@ export default function GameStarted({
         <Messages listeners={listeners} websocket={websocket} />
         <HStack pt={10}>
           <Image
+            alt="Joker"
             src="/joker.png"
             draggable={false}
             userSelect="none"
@@ -55,14 +57,11 @@ export default function GameStarted({
               if (event.key === "Enter") {
                 if (!inputRef.current!.value) return;
 
-                websocket?.send(
-                  JSON.stringify({
-                    method: "message",
-                    token: client?.token,
-                    content: inputRef.current!.value,
-                    gameId: game.id,
-                  })
-                );
+                websocket?.send("message", {
+                  token: client?.token,
+                  content: inputRef.current!.value,
+                  gameId: game.id,
+                });
                 inputRef.current!.value = "";
               }
             }}

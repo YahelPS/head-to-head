@@ -1,5 +1,6 @@
 import { VStack } from "@chakra-ui/react";
 import { useState, useEffect } from "react";
+import WebSocketClient from "../../WebSocketClient";
 import ChatMessage from "./ChatMessage";
 
 export interface Message {
@@ -13,7 +14,7 @@ export default function Messages({
   websocket,
 }: {
   listeners: any;
-  websocket: WebSocket | null | undefined;
+  websocket: WebSocketClient | null | undefined;
 }) {
   const [messages, setMessages] = useState<{ messages: Message[] }>({
     messages: [],
@@ -24,26 +25,18 @@ export default function Messages({
     if (listeners.messages) return;
 
     listeners.messages = true;
-    websocket?.addEventListener("message", (message) => {
-      try {
-        const data = JSON.parse(message.data);
+    websocket?.on("message", (data) => {
+      if (data.error || !data.content || !data.author) return;
 
-        if (data.method === "message") {
-          if (data.error || !data.content || !data.author) return;
+      messageArr.push({
+        author: data.author.name,
+        message: data.content,
+        correct: data.correct,
+      });
 
-          messageArr.push({
-            author: data.author.name,
-            message: data.content,
-            correct: data.correct,
-          });
-
-          setMessages({ messages: messageArr });
-        }
-      } catch {
-        console.log("Error parsing message");
-      }
+      setMessages({ messages: messageArr });
     });
-  }, []);
+  }, [messageArr, websocket, listeners]);
 
   return (
     <VStack

@@ -1,5 +1,6 @@
 import { Container, VStack, Heading, Button, Image } from "@chakra-ui/react";
 import GameCode from "../components/Game/GameCode";
+import WebSocketClient from "../WebSocketClient";
 
 export default function BeforeGame({
   game,
@@ -10,7 +11,7 @@ export default function BeforeGame({
   game: any;
   gameId: string | string[] | undefined;
   client: any;
-  websocket: WebSocket | null | undefined;
+  websocket: WebSocketClient | null;
 }) {
   const waitingGifs = [
     "https://media.giphy.com/media/RKS1pHGiUUZ2g/giphy.gif",
@@ -36,6 +37,7 @@ export default function BeforeGame({
           Waiting for {game?.creator.name || "the creator"} to start the game...
         </Heading>
         <Image
+          alt="waiting gif"
           src={waitingGifs[Math.floor(Math.random() * waitingGifs.length)]}
           h={250}
         />
@@ -43,13 +45,10 @@ export default function BeforeGame({
           variant="primary"
           disabled={client?.clientId !== game.creator.id}
           onClick={() => {
-            websocket?.send(
-              JSON.stringify({
-                method: "start",
-                gameId,
-                token: client?.token,
-              })
-            );
+            websocket?.send("start", {
+              gameId,
+              token: client?.token,
+            });
           }}
         >
           Start Game

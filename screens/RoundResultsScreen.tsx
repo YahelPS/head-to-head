@@ -7,13 +7,11 @@ import Sign from "../components/Game/Sign";
 import game from "../pages/game";
 
 export default function RoundResultsScreen({
-  roundEnded,
+  timeLeft,
   roundResults,
   game,
 }: {
-  roundEnded: {
-    waiting: number;
-  };
+  timeLeft: number;
   roundResults: {
     roundNumber: number;
     roundScores: {
@@ -22,13 +20,13 @@ export default function RoundResultsScreen({
   } | null;
   game: any;
 }) {
-  const [timer, setTimer] = useState(roundEnded.waiting / 1000);
+  const [timer, setTimer] = useState(timeLeft / 1000);
   useEffect(() => {
     const interval = setInterval(() => {
       setTimer(timer - 1);
     }, 1000);
     return () => clearInterval(interval);
-  }, [timer, roundEnded.waiting]);
+  }, [timer, timeLeft]);
 
   const leaderboard = game.players
     .map((player: { name: string; clientId: string }) => ({
